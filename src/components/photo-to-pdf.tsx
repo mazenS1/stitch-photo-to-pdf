@@ -3,6 +3,8 @@ import { jsPDF } from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useLanguage } from "@/lib/i18n";
 import {
   UploadSimple,
   FilePdf,
@@ -15,6 +17,7 @@ import {
 } from "@phosphor-icons/react";
 
 export function PhotoToPdf() {
+  const { t } = useLanguage();
   const [images, setImages] = useState<Array<{ url: string; file: File }>>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
@@ -152,12 +155,15 @@ export function PhotoToPdf() {
   return (
     <div className="min-h-screen bg-background p-4 sm:p-8">
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-        <div className="text-center space-y-1 sm:space-y-2">
+        <div className="text-center space-y-1 sm:space-y-2 relative">
+          <div className="absolute top-0 end-0">
+            <LanguageToggle />
+          </div>
           <h1 className="text-2xl sm:text-4xl font-bold text-foreground">
-            Photo to PDF
+            {t.title}
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Upload photos and convert them into a single PDF file
+            {t.subtitle}
           </p>
         </div>
 
@@ -171,7 +177,7 @@ export function PhotoToPdf() {
                   size="default"
                 >
                   <UploadSimple weight="bold" />
-                  <span className="sm:inline">Add Photos</span>
+                  <span className="sm:inline">{t.addPhotos}</span>
                 </Button>
                 {images.length > 0 && (
                   <>
@@ -183,10 +189,10 @@ export function PhotoToPdf() {
                     >
                       <Eye weight="bold" />
                       <span className="hidden sm:inline">
-                        {isGenerating ? "Generating..." : "Preview"}
+                        {isGenerating ? t.generating : t.preview}
                       </span>
                       <span className="sm:hidden">
-                        {isGenerating ? "..." : "Preview"}
+                        {isGenerating ? "..." : t.preview}
                       </span>
                     </Button>
                     <Button
@@ -195,8 +201,8 @@ export function PhotoToPdf() {
                       className="gap-2 flex-1 sm:flex-none"
                     >
                       <FilePdf weight="bold" />
-                      <span className="hidden sm:inline">Download PDF</span>
-                      <span className="sm:hidden">Download</span>
+                      <span className="hidden sm:inline">{t.downloadPdf}</span>
+                      <span className="sm:hidden">{t.download}</span>
                     </Button>
                   </>
                 )}
@@ -208,7 +214,7 @@ export function PhotoToPdf() {
                   className="gap-2 w-full sm:w-auto"
                 >
                   <Trash weight="bold" />
-                  Clear All
+                  {t.clearAll}
                 </Button>
               )}
             </div>
@@ -226,14 +232,14 @@ export function PhotoToPdf() {
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                   <Badge variant="secondary">
-                    {images.length} {images.length === 1 ? "photo" : "photos"}
+                    {images.length} {images.length === 1 ? t.photo : t.photos}
                   </Badge>
                   <span className="text-xs sm:text-sm text-muted-foreground">
                     <span className="hidden sm:inline">
-                      Drag photos to reorder •{" "}
+                      {t.dragToReorder} •{" "}
                     </span>
-                    <span className="sm:hidden">Tap arrows to reorder • </span>
-                    Each photo = 1 page
+                    <span className="sm:hidden">{t.tapToReorder} • </span>
+                    {t.eachPhotoPage}
                   </span>
                 </div>
 
@@ -259,18 +265,18 @@ export function PhotoToPdf() {
                       {/* Desktop: hover to show delete */}
                       <button
                         onClick={() => removeImage(index)}
-                        className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 bg-destructive text-destructive-foreground rounded-full p-1 sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                        aria-label="Remove image"
+                        className="absolute top-1.5 end-1.5 sm:top-2 sm:end-2 bg-destructive text-destructive-foreground rounded-full p-1 sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                        aria-label={t.removeImage}
                       >
                         <X weight="bold" size={14} />
                       </button>
                       {/* Mobile: reorder buttons */}
-                      <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 sm:hidden">
+                      <div className="absolute top-1.5 start-1.5 flex flex-col gap-1 sm:hidden">
                         {index > 0 && (
                           <button
                             onClick={() => moveImage(index, "up")}
                             className="bg-background/90 backdrop-blur-sm text-foreground rounded p-1 border border-border"
-                            aria-label="Move up"
+                            aria-label={t.moveUp}
                           >
                             <ArrowUp weight="bold" size={14} />
                           </button>
@@ -279,14 +285,14 @@ export function PhotoToPdf() {
                           <button
                             onClick={() => moveImage(index, "down")}
                             className="bg-background/90 backdrop-blur-sm text-foreground rounded p-1 border border-border"
-                            aria-label="Move down"
+                            aria-label={t.moveDown}
                           >
                             <ArrowDown weight="bold" size={14} />
                           </button>
                         )}
                       </div>
-                      <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 bg-background/80 backdrop-blur-sm rounded px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs font-medium">
-                        Page {index + 1}
+                      <div className="absolute bottom-1.5 start-1.5 sm:bottom-2 sm:start-2 bg-background/80 backdrop-blur-sm rounded px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs font-medium">
+                        {t.page} {index + 1}
                       </div>
                     </div>
                   ))}
@@ -304,10 +310,10 @@ export function PhotoToPdf() {
                   className="mx-auto mb-3 sm:mb-4 text-muted-foreground"
                 />
                 <p className="text-base sm:text-lg font-medium text-foreground mb-1">
-                  Tap to upload photos
+                  {t.tapToUpload}
                 </p>
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  or drag and drop images here
+                  {t.dragAndDrop}
                 </p>
               </div>
             )}
@@ -321,7 +327,7 @@ export function PhotoToPdf() {
           <div className="bg-background rounded-lg w-full max-w-5xl h-[95vh] sm:h-[90vh] flex flex-col">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 sm:p-4 border-b border-border">
               <h2 className="text-base sm:text-lg font-semibold">
-                PDF Preview
+                {t.pdfPreview}
               </h2>
               <div className="flex gap-2">
                 <Button
@@ -330,7 +336,7 @@ export function PhotoToPdf() {
                   size="default"
                 >
                   <DownloadSimple weight="bold" />
-                  Download
+                  {t.download}
                 </Button>
                 <Button
                   onClick={closePreview}
@@ -339,7 +345,7 @@ export function PhotoToPdf() {
                   size="default"
                 >
                   <X weight="bold" />
-                  Close
+                  {t.close}
                 </Button>
               </div>
             </div>
