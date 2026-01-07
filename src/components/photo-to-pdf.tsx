@@ -3,11 +3,13 @@ import { jsPDF } from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UploadSimple, FilePdf, Trash, X } from "@phosphor-icons/react";
+import { UploadSimple, FilePdf, Trash, X, Eye, DownloadSimple } from "@phosphor-icons/react";
 
 export function PhotoToPdf() {
   const [images, setImages] = useState<Array<{ url: string; file: File }>>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,8 +57,8 @@ export function PhotoToPdf() {
     setDraggedIndex(null);
   };
 
-  const generatePdf = async () => {
-    if (images.length === 0) return;
+  const createPdf = async () => {
+    if (images.length === 0) return null;
 
     const pdf = new jsPDF();
     let isFirstPage = true;
@@ -95,7 +97,35 @@ export function PhotoToPdf() {
       pdf.addImage(img, "JPEG", xOffset, yOffset, renderWidth, renderHeight);
     }
 
-    pdf.save("photos.pdf");
+    return pdf;
+  };
+
+  const previewPdf = async () => {
+    setIsGenerating(true);
+    try {
+      const pdf = await createPdf();
+      if (pdf) {
+        const blob = pdf.output("blob");
+        const url = URL.createObjectURL(blob);
+        setPdfPreviewUrl(url);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const downloadPdf = async () => {
+    const pdf = await createPdf();
+    if (pdf) {
+      pdf.save("photos.pdf");
+    }
+  };
+
+  const closePreview = () => {
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
   };
 
   return (
@@ -120,14 +150,25 @@ export function PhotoToPdf() {
                   Add Photos
                 </Button>
                 {images.length > 0 && (
-                  <Button
-                    onClick={generatePdf}
-                    variant="default"
-                    className="gap-2"
-                  >
-                    <FilePdf weight="bold" />
-                    Generate PDF
-                  </Button>
+                  <>
+                    <Button
+                      onClick={previewPdf}
+                      variant="outline"
+                      className="gap-2"
+                      disabled={isGenerating}
+                    >
+                      <Eye weight="bold" />
+                      {isGenerating ? "Generating..." : "Preview"}
+                    </Button>
+                    <Button
+                      onClick={downloadPdf}
+                      variant="default"
+                      className="gap-2"
+                    >
+                      <FilePdf weight="bold" />
+                      Download PDF
+                    </Button>
+                  </>
                 )}
               </div>
               {images.length > 0 && (
@@ -213,6 +254,34 @@ export function PhotoToPdf() {
           </div>
         </Card>
       </div>
+
+      {/* PDF Preview Modal */}
+      {pdfPreviewUrl && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg w-full max-w-5xl h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h2 className="text-lg font-semibold">PDF Preview</h2>
+              <div className="flex gap-2">
+                <Button onClick={downloadPdf} className="gap-2">
+                  <DownloadSimple weight="bold" />
+                  Download
+                </Button>
+                <Button onClick={closePreview} variant="outline" className="gap-2">
+                  <X weight="bold" />
+                  Close
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 p-4">
+              <iframe
+                src={pdfPreviewUrl}
+                className="w-full h-full rounded border border-border"
+                title="PDF Preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
