@@ -3,6 +3,8 @@ import { jsPDF } from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -22,7 +24,26 @@ export function PhotoToPdf() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [pdfName, setPdfName] = useState("photos");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getPdfFilename = () => {
+    const fallbackBaseName = "photos";
+    const rawName = pdfName.trim();
+    const baseName = rawName.length > 0 ? rawName : fallbackBaseName;
+
+    const cleanedBaseName = baseName
+      .replace(/[\\/:*?\"<>|\u0000-\u001F]/g, "_")
+      .trim()
+      .replace(/[. ]+$/g, "");
+
+    const safeBaseName =
+      cleanedBaseName.length > 0 ? cleanedBaseName : fallbackBaseName;
+
+    return safeBaseName.toLowerCase().endsWith(".pdf")
+      ? safeBaseName
+      : `${safeBaseName}.pdf`;
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -141,7 +162,7 @@ export function PhotoToPdf() {
   const downloadPdf = async () => {
     const pdf = await createPdf();
     if (pdf) {
-      pdf.save("photos.pdf");
+      pdf.save(getPdfFilename());
     }
   };
 
@@ -196,25 +217,25 @@ export function PhotoToPdf() {
                       </span>
                     </Button>
                     <Button
-                      onClick={downloadPdf}
-                      variant="default"
+                      onClick={clearAll}
+                      variant="outline"
                       className="gap-2 flex-1 sm:flex-none"
                     >
-                      <FilePdf weight="bold" />
-                      <span className="hidden sm:inline">{t.downloadPdf}</span>
-                      <span className="sm:hidden">{t.download}</span>
+                      <Trash weight="bold" />
+                      {t.clearAll}
                     </Button>
                   </>
                 )}
               </div>
               {images.length > 0 && (
                 <Button
-                  onClick={clearAll}
-                  variant="outline"
+                  onClick={downloadPdf}
+                  variant="default"
                   className="gap-2 w-full sm:w-auto"
                 >
-                  <Trash weight="bold" />
-                  {t.clearAll}
+                  <FilePdf weight="bold" />
+                  <span className="hidden sm:inline">{t.downloadPdf}</span>
+                  <span className="sm:hidden">{t.download}</span>
                 </Button>
               )}
             </div>
@@ -227,6 +248,21 @@ export function PhotoToPdf() {
               onChange={handleFileSelect}
               className="hidden"
             />
+
+            {images.length > 0 && (
+              <div className="max-w-md">
+                <Field>
+                  <FieldLabel htmlFor="pdf-name">{t.pdfName}</FieldLabel>
+                  <Input
+                    id="pdf-name"
+                    value={pdfName}
+                    onChange={(e) => setPdfName(e.target.value)}
+                    placeholder={t.pdfNamePlaceholder}
+                    autoComplete="off"
+                  />
+                </Field>
+              </div>
+            )}
 
             {images.length > 0 && (
               <div className="space-y-3">

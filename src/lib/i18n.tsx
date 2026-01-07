@@ -11,6 +11,8 @@ interface Translations {
   generating: string;
   downloadPdf: string;
   download: string;
+  pdfName: string;
+  pdfNamePlaceholder: string;
   clearAll: string;
   photo: string;
   photos: string;
@@ -36,6 +38,8 @@ const translations: Record<Language, Translations> = {
     generating: "Generating...",
     downloadPdf: "Download PDF",
     download: "Download",
+    pdfName: "PDF name",
+    pdfNamePlaceholder: "e.g. photos",
     clearAll: "Clear All",
     photo: "photo",
     photos: "photos",
@@ -59,6 +63,8 @@ const translations: Record<Language, Translations> = {
     generating: "جاري الإنشاء...",
     downloadPdf: "تحميل PDF",
     download: "تحميل",
+    pdfName: "اسم ملف PDF",
+    pdfNamePlaceholder: "مثال: الصور",
     clearAll: "مسح الكل",
     photo: "صورة",
     photos: "صور",
