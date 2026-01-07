@@ -3,7 +3,16 @@ import { jsPDF } from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UploadSimple, FilePdf, Trash, X, Eye, DownloadSimple, ArrowUp, ArrowDown } from "@phosphor-icons/react";
+import {
+  UploadSimple,
+  FilePdf,
+  Trash,
+  X,
+  Eye,
+  DownloadSimple,
+  ArrowUp,
+  ArrowDown,
+} from "@phosphor-icons/react";
 
 export function PhotoToPdf() {
   const [images, setImages] = useState<Array<{ url: string; file: File }>>([]);
@@ -60,9 +69,12 @@ export function PhotoToPdf() {
   const moveImage = (index: number, direction: "up" | "down") => {
     const newIndex = direction === "up" ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= images.length) return;
-    
+
     const newImages = [...images];
-    [newImages[index], newImages[newIndex]] = [newImages[newIndex], newImages[index]];
+    [newImages[index], newImages[newIndex]] = [
+      newImages[newIndex],
+      newImages[index],
+    ];
     setImages(newImages);
   };
 
@@ -141,7 +153,9 @@ export function PhotoToPdf() {
     <div className="min-h-screen bg-background p-4 sm:p-8">
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         <div className="text-center space-y-1 sm:space-y-2">
-          <h1 className="text-2xl sm:text-4xl font-bold text-foreground">Photo to PDF</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold text-foreground">
+            Photo to PDF
+          </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             Upload photos and convert them into a single PDF file
           </p>
@@ -168,8 +182,12 @@ export function PhotoToPdf() {
                       disabled={isGenerating}
                     >
                       <Eye weight="bold" />
-                      <span className="hidden sm:inline">{isGenerating ? "Generating..." : "Preview"}</span>
-                      <span className="sm:hidden">{isGenerating ? "..." : "Preview"}</span>
+                      <span className="hidden sm:inline">
+                        {isGenerating ? "Generating..." : "Preview"}
+                      </span>
+                      <span className="sm:hidden">
+                        {isGenerating ? "..." : "Preview"}
+                      </span>
                     </Button>
                     <Button
                       onClick={downloadPdf}
@@ -184,7 +202,11 @@ export function PhotoToPdf() {
                 )}
               </div>
               {images.length > 0 && (
-                <Button onClick={clearAll} variant="outline" className="gap-2 w-full sm:w-auto">
+                <Button
+                  onClick={clearAll}
+                  variant="outline"
+                  className="gap-2 w-full sm:w-auto"
+                >
                   <Trash weight="bold" />
                   Clear All
                 </Button>
@@ -207,7 +229,9 @@ export function PhotoToPdf() {
                     {images.length} {images.length === 1 ? "photo" : "photos"}
                   </Badge>
                   <span className="text-xs sm:text-sm text-muted-foreground">
-                    <span className="hidden sm:inline">Drag photos to reorder • </span>
+                    <span className="hidden sm:inline">
+                      Drag photos to reorder •{" "}
+                    </span>
                     <span className="sm:hidden">Tap arrows to reorder • </span>
                     Each photo = 1 page
                   </span>
@@ -296,13 +320,24 @@ export function PhotoToPdf() {
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 sm:p-4">
           <div className="bg-background rounded-lg w-full max-w-5xl h-[95vh] sm:h-[90vh] flex flex-col">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 sm:p-4 border-b border-border">
-              <h2 className="text-base sm:text-lg font-semibold">PDF Preview</h2>
+              <h2 className="text-base sm:text-lg font-semibold">
+                PDF Preview
+              </h2>
               <div className="flex gap-2">
-                <Button onClick={downloadPdf} className="gap-2 flex-1 sm:flex-none" size="default">
+                <Button
+                  onClick={downloadPdf}
+                  className="gap-2 flex-1 sm:flex-none"
+                  size="default"
+                >
                   <DownloadSimple weight="bold" />
                   Download
                 </Button>
-                <Button onClick={closePreview} variant="outline" className="gap-2 flex-1 sm:flex-none" size="default">
+                <Button
+                  onClick={closePreview}
+                  variant="outline"
+                  className="gap-2 flex-1 sm:flex-none"
+                  size="default"
+                >
                   <X weight="bold" />
                   Close
                 </Button>

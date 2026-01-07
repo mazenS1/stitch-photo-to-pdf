@@ -1,7 +1,19 @@
 {
-  "name": "stich-photo-to-pdf",
+  "name": "stitch-photo-to-pdf",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "A simple web application to stitch multiple photos into a single PDF file.",
+  "author": "",
+  "license": "MIT",
+  "keywords": [
+    "pdf",
+    "photo",
+    "image",
+    "converter",
+    "react",
+    "vite",
+    "jspdf"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
