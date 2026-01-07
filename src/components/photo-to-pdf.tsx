@@ -7,6 +7,7 @@ import { UploadSimple, FilePdf, Trash, X } from "@phosphor-icons/react";
 
 export function PhotoToPdf() {
   const [images, setImages] = useState<Array<{ url: string; file: File }>>([]);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,6 +32,27 @@ export function PhotoToPdf() {
   const clearAll = () => {
     images.forEach((img) => URL.revokeObjectURL(img.url));
     setImages([]);
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newImages = [...images];
+    const draggedImage = newImages[draggedIndex];
+    newImages.splice(draggedIndex, 1);
+    newImages.splice(index, 0, draggedImage);
+
+    setImages(newImages);
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
   };
 
   const generatePdf = async () => {
@@ -132,13 +154,22 @@ export function PhotoToPdf() {
                     {images.length} {images.length === 1 ? "photo" : "photos"}
                   </Badge>
                   <span className="text-sm text-muted-foreground">
-                    Each photo will be a separate page in the PDF
+                    Drag photos to reorder • Each photo will be a separate page
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {images.map((image, index) => (
-                    <div key={index} className="relative group">
+                    <div
+                      key={index}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragEnd={handleDragEnd}
+                      className={`relative group cursor-move ${
+                        draggedIndex === index ? "opacity-50" : ""
+                      }`}
+                    >
                       <div className="aspect-square rounded-lg overflow-hidden border-2 border-border">
                         <img
                           src={image.url}
