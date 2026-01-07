@@ -3,7 +3,7 @@ import { jsPDF } from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UploadSimple, FilePdf, Trash, X, Eye, DownloadSimple } from "@phosphor-icons/react";
+import { UploadSimple, FilePdf, Trash, X, Eye, DownloadSimple, ArrowUp, ArrowDown } from "@phosphor-icons/react";
 
 export function PhotoToPdf() {
   const [images, setImages] = useState<Array<{ url: string; file: File }>>([]);
@@ -55,6 +55,15 @@ export function PhotoToPdf() {
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
+  };
+
+  const moveImage = (index: number, direction: "up" | "down") => {
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= images.length) return;
+    
+    const newImages = [...images];
+    [newImages[index], newImages[newIndex]] = [newImages[newIndex], newImages[index]];
+    setImages(newImages);
   };
 
   const createPdf = async () => {
@@ -129,50 +138,53 @@ export function PhotoToPdf() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-foreground">Photo to PDF</h1>
-          <p className="text-muted-foreground">
+    <div className="min-h-screen bg-background p-4 sm:p-8">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+        <div className="text-center space-y-1 sm:space-y-2">
+          <h1 className="text-2xl sm:text-4xl font-bold text-foreground">Photo to PDF</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Upload photos and convert them into a single PDF file
           </p>
         </div>
 
-        <Card className="p-6">
+        <Card className="p-4 sm:p-6">
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   onClick={() => fileInputRef.current?.click()}
-                  className="gap-2"
+                  className="gap-2 flex-1 sm:flex-none"
+                  size="default"
                 >
                   <UploadSimple weight="bold" />
-                  Add Photos
+                  <span className="sm:inline">Add Photos</span>
                 </Button>
                 {images.length > 0 && (
                   <>
                     <Button
                       onClick={previewPdf}
                       variant="outline"
-                      className="gap-2"
+                      className="gap-2 flex-1 sm:flex-none"
                       disabled={isGenerating}
                     >
                       <Eye weight="bold" />
-                      {isGenerating ? "Generating..." : "Preview"}
+                      <span className="hidden sm:inline">{isGenerating ? "Generating..." : "Preview"}</span>
+                      <span className="sm:hidden">{isGenerating ? "..." : "Preview"}</span>
                     </Button>
                     <Button
                       onClick={downloadPdf}
                       variant="default"
-                      className="gap-2"
+                      className="gap-2 flex-1 sm:flex-none"
                     >
                       <FilePdf weight="bold" />
-                      Download PDF
+                      <span className="hidden sm:inline">Download PDF</span>
+                      <span className="sm:hidden">Download</span>
                     </Button>
                   </>
                 )}
               </div>
               {images.length > 0 && (
-                <Button onClick={clearAll} variant="outline" className="gap-2">
+                <Button onClick={clearAll} variant="outline" className="gap-2 w-full sm:w-auto">
                   <Trash weight="bold" />
                   Clear All
                 </Button>
@@ -189,17 +201,19 @@ export function PhotoToPdf() {
             />
 
             {images.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                   <Badge variant="secondary">
                     {images.length} {images.length === 1 ? "photo" : "photos"}
                   </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    Drag photos to reorder • Each photo will be a separate page
+                  <span className="text-xs sm:text-sm text-muted-foreground">
+                    <span className="hidden sm:inline">Drag photos to reorder • </span>
+                    <span className="sm:hidden">Tap arrows to reorder • </span>
+                    Each photo = 1 page
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   {images.map((image, index) => (
                     <div
                       key={index}
@@ -207,7 +221,7 @@ export function PhotoToPdf() {
                       onDragStart={() => handleDragStart(index)}
                       onDragOver={(e) => handleDragOver(e, index)}
                       onDragEnd={handleDragEnd}
-                      className={`relative group cursor-move ${
+                      className={`relative group sm:cursor-move ${
                         draggedIndex === index ? "opacity-50" : ""
                       }`}
                     >
@@ -218,14 +232,36 @@ export function PhotoToPdf() {
                           className="w-full h-full object-cover"
                         />
                       </div>
+                      {/* Desktop: hover to show delete */}
                       <button
                         onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 bg-destructive text-destructive-foreground rounded-full p-1 sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                         aria-label="Remove image"
                       >
-                        <X weight="bold" size={16} />
+                        <X weight="bold" size={14} />
                       </button>
-                      <div className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm rounded px-2 py-1 text-xs font-medium">
+                      {/* Mobile: reorder buttons */}
+                      <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 sm:hidden">
+                        {index > 0 && (
+                          <button
+                            onClick={() => moveImage(index, "up")}
+                            className="bg-background/90 backdrop-blur-sm text-foreground rounded p-1 border border-border"
+                            aria-label="Move up"
+                          >
+                            <ArrowUp weight="bold" size={14} />
+                          </button>
+                        )}
+                        {index < images.length - 1 && (
+                          <button
+                            onClick={() => moveImage(index, "down")}
+                            className="bg-background/90 backdrop-blur-sm text-foreground rounded p-1 border border-border"
+                            aria-label="Move down"
+                          >
+                            <ArrowDown weight="bold" size={14} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 bg-background/80 backdrop-blur-sm rounded px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs font-medium">
                         Page {index + 1}
                       </div>
                     </div>
@@ -237,16 +273,16 @@ export function PhotoToPdf() {
             {images.length === 0 && (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-border rounded-lg p-12 text-center cursor-pointer hover:border-primary transition-colors"
+                className="border-2 border-dashed border-border rounded-lg p-8 sm:p-12 text-center cursor-pointer hover:border-primary active:border-primary transition-colors"
               >
                 <UploadSimple
-                  size={48}
-                  className="mx-auto mb-4 text-muted-foreground"
+                  size={40}
+                  className="mx-auto mb-3 sm:mb-4 text-muted-foreground"
                 />
-                <p className="text-lg font-medium text-foreground mb-1">
-                  Click to upload photos
+                <p className="text-base sm:text-lg font-medium text-foreground mb-1">
+                  Tap to upload photos
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   or drag and drop images here
                 </p>
               </div>
@@ -257,22 +293,22 @@ export function PhotoToPdf() {
 
       {/* PDF Preview Modal */}
       {pdfPreviewUrl && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-background rounded-lg w-full max-w-5xl h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <h2 className="text-lg font-semibold">PDF Preview</h2>
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-background rounded-lg w-full max-w-5xl h-[95vh] sm:h-[90vh] flex flex-col">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 sm:p-4 border-b border-border">
+              <h2 className="text-base sm:text-lg font-semibold">PDF Preview</h2>
               <div className="flex gap-2">
-                <Button onClick={downloadPdf} className="gap-2">
+                <Button onClick={downloadPdf} className="gap-2 flex-1 sm:flex-none" size="default">
                   <DownloadSimple weight="bold" />
                   Download
                 </Button>
-                <Button onClick={closePreview} variant="outline" className="gap-2">
+                <Button onClick={closePreview} variant="outline" className="gap-2 flex-1 sm:flex-none" size="default">
                   <X weight="bold" />
                   Close
                 </Button>
               </div>
             </div>
-            <div className="flex-1 p-4">
+            <div className="flex-1 p-2 sm:p-4 min-h-0">
               <iframe
                 src={pdfPreviewUrl}
                 className="w-full h-full rounded border border-border"
