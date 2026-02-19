@@ -18,6 +18,7 @@ import {
   ArrowUp,
   ArrowDown,
   NotePencil,
+  CircleNotch,
 } from "@phosphor-icons/react";
 
 type ImagePage = {
@@ -135,8 +136,10 @@ export function PhotoToPdf() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [pdfName, setPdfName] = useState("photos");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isBusy = isGenerating || isDownloading;
 
   const getPdfFilename = () => {
     const fallbackBaseName = "photos";
@@ -323,6 +326,8 @@ export function PhotoToPdf() {
   };
 
   const previewPdf = async () => {
+    if (isBusy) return;
+
     setIsGenerating(true);
     try {
       const pdf = await createPdf();
@@ -342,9 +347,16 @@ export function PhotoToPdf() {
   };
 
   const downloadPdf = async () => {
-    const pdf = await createPdf();
-    if (pdf) {
-      pdf.save(getPdfFilename());
+    if (isBusy) return;
+
+    setIsDownloading(true);
+    try {
+      const pdf = await createPdf();
+      if (pdf) {
+        pdf.save(getPdfFilename());
+      }
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -393,14 +405,14 @@ export function PhotoToPdf() {
                       onClick={previewPdf}
                       variant="outline"
                       className="gap-2 flex-1 sm:flex-none"
-                      disabled={isGenerating}
+                      disabled={isBusy}
                     >
                       <Eye weight="bold" />
                       <span className="hidden sm:inline">
-                        {isGenerating ? t.generating : t.preview}
+                        {isBusy ? t.generating : t.preview}
                       </span>
                       <span className="sm:hidden">
-                        {isGenerating ? "..." : t.preview}
+                        {isBusy ? "..." : t.preview}
                       </span>
                     </Button>
                     <Button
@@ -419,10 +431,17 @@ export function PhotoToPdf() {
                   onClick={downloadPdf}
                   variant="default"
                   className="gap-2 w-full sm:w-auto"
+                  disabled={isBusy}
                 >
-                  <FilePdf weight="bold" />
-                  <span className="hidden sm:inline">{t.downloadPdf}</span>
-                  <span className="sm:hidden">{t.download}</span>
+                  {isDownloading ? (
+                    <CircleNotch weight="bold" className="animate-spin" />
+                  ) : (
+                    <FilePdf weight="bold" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {isDownloading ? t.preparingDownload : t.downloadPdf}
+                  </span>
+                  <span className="sm:hidden">{isDownloading ? "..." : t.download}</span>
                 </Button>
               )}
             </div>
@@ -595,9 +614,14 @@ export function PhotoToPdf() {
                   onClick={downloadPdf}
                   className="gap-2 flex-1 sm:flex-none"
                   size="default"
+                  disabled={isBusy}
                 >
-                  <DownloadSimple weight="bold" />
-                  {t.download}
+                  {isDownloading ? (
+                    <CircleNotch weight="bold" className="animate-spin" />
+                  ) : (
+                    <DownloadSimple weight="bold" />
+                  )}
+                  {isDownloading ? t.preparingDownload : t.download}
                 </Button>
                 <Button
                   onClick={closePreview}

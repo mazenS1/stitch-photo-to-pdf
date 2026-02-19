@@ -10,6 +10,7 @@ interface Translations {
   addBlankPage: string;
   preview: string;
   generating: string;
+  preparingDownload: string;
   downloadPdf: string;
   download: string;
   pdfName: string;
@@ -46,6 +47,7 @@ const translations: Record<Language, Translations> = {
     addBlankPage: "Add Blank Page",
     preview: "Preview",
     generating: "Generating...",
+    preparingDownload: "Preparing download...",
     downloadPdf: "Download PDF",
     download: "Download",
     pdfName: "PDF name",
@@ -80,6 +82,7 @@ const translations: Record<Language, Translations> = {
     addBlankPage: "إضافة صفحة فارغة",
     preview: "معاينة",
     generating: "جاري الإنشاء...",
+    preparingDownload: "جاري تجهيز التحميل...",
     downloadPdf: "تحميل PDF",
     download: "تحميل",
     pdfName: "اسم ملف PDF",
