@@ -7,7 +7,9 @@ A modern, fast, and secure client-side application to stitch multiple photos int
 ## Features
 
 - **Client-side processing**: All processing happens in your browser. No images are uploaded to any server.
-- **Drag and Drop**: Easily reorder images using drag and drop functionality.
+- **Mixed PDF pages**: Combine photo pages with blank white pages.
+- **Write on blank pages**: Add editable text content on blank pages before generating the PDF.
+- **Drag and Drop**: Easily reorder pages using drag and drop functionality.
 - **Mobile Friendly**: Fully responsive UI that works great on mobile devices.
 - **Instant Preview**: Preview your PDF before downloading.
 - **Customizable**: Supports various image formats.
