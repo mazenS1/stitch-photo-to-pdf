@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { jsPDF } from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -16,11 +17,41 @@ import {
   DownloadSimple,
   ArrowUp,
   ArrowDown,
+  NotePencil,
 } from "@phosphor-icons/react";
+
+type ImagePage = {
+  id: string;
+  type: "image";
+  url: string;
+  file: File;
+};
+
+type BlankPage = {
+  id: string;
+  type: "blank";
+  text: string;
+};
+
+type PdfPage = ImagePage | BlankPage;
+
+const createPageId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const revokePageResources = (page: PdfPage) => {
+  if (page.type === "image") {
+    URL.revokeObjectURL(page.url);
+  }
+};
 
 export function PhotoToPdf() {
   const { t } = useLanguage();
-  const [images, setImages] = useState<Array<{ url: string; file: File }>>([]);
+  const [pages, setPages] = useState<PdfPage[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -33,7 +64,10 @@ export function PhotoToPdf() {
     const baseName = rawName.length > 0 ? rawName : fallbackBaseName;
 
     const cleanedBaseName = baseName
-      .replace(/[\\/:*?\"<>|\u0000-\u001F]/g, "_")
+      .replace(/[\\/:*?"<>|]/g, "_")
+      .split("")
+      .map((char) => (char.charCodeAt(0) <= 31 ? "_" : char))
+      .join("")
       .trim()
       .replace(/[. ]+$/g, "");
 
@@ -45,28 +79,66 @@ export function PhotoToPdf() {
       : `${safeBaseName}.pdf`;
   };
 
+  const closePreview = () => {
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    const newImages = Array.from(files).map((file) => ({
+    const newPages: ImagePage[] = Array.from(files).map((file) => ({
+      id: createPageId(),
+      type: "image",
       url: URL.createObjectURL(file),
       file,
     }));
 
-    setImages((prev) => [...prev, ...newImages]);
+    setPages((prev) => [...prev, ...newPages]);
+    e.target.value = "";
   };
 
-  const removeImage = (index: number) => {
-    setImages((prev) => {
-      URL.revokeObjectURL(prev[index].url);
+  const addBlankPage = () => {
+    setPages((prev) => [
+      ...prev,
+      {
+        id: createPageId(),
+        type: "blank",
+        text: "",
+      },
+    ]);
+  };
+
+  const updateBlankPageText = (index: number, text: string) => {
+    setPages((prev) =>
+      prev.map((page, pageIndex) => {
+        if (pageIndex !== index || page.type !== "blank") {
+          return page;
+        }
+
+        return { ...page, text };
+      })
+    );
+  };
+
+  const removePage = (index: number) => {
+    setPages((prev) => {
+      const pageToRemove = prev[index];
+      if (pageToRemove) {
+        revokePageResources(pageToRemove);
+      }
+
       return prev.filter((_, i) => i !== index);
     });
   };
 
   const clearAll = () => {
-    images.forEach((img) => URL.revokeObjectURL(img.url));
-    setImages([]);
+    pages.forEach(revokePageResources);
+    setPages([]);
+    closePreview();
   };
 
   const handleDragStart = (index: number) => {
@@ -77,12 +149,12 @@ export function PhotoToPdf() {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === index) return;
 
-    const newImages = [...images];
-    const draggedImage = newImages[draggedIndex];
-    newImages.splice(draggedIndex, 1);
-    newImages.splice(index, 0, draggedImage);
+    const newPages = [...pages];
+    const draggedPage = newPages[draggedIndex];
+    newPages.splice(draggedIndex, 1);
+    newPages.splice(index, 0, draggedPage);
 
-    setImages(newImages);
+    setPages(newPages);
     setDraggedIndex(index);
   };
 
@@ -90,56 +162,73 @@ export function PhotoToPdf() {
     setDraggedIndex(null);
   };
 
-  const moveImage = (index: number, direction: "up" | "down") => {
+  const movePage = (index: number, direction: "up" | "down") => {
     const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= images.length) return;
+    if (newIndex < 0 || newIndex >= pages.length) return;
 
-    const newImages = [...images];
-    [newImages[index], newImages[newIndex]] = [
-      newImages[newIndex],
-      newImages[index],
+    const newPages = [...pages];
+    [newPages[index], newPages[newIndex]] = [
+      newPages[newIndex],
+      newPages[index],
     ];
-    setImages(newImages);
+    setPages(newPages);
   };
 
   const createPdf = async () => {
-    if (images.length === 0) return null;
+    if (pages.length === 0) return null;
 
     const pdf = new jsPDF();
     let isFirstPage = true;
 
-    for (const { url } of images) {
+    const addPageIfNeeded = () => {
+      if (!isFirstPage) {
+        pdf.addPage();
+      }
+      isFirstPage = false;
+    };
+
+    for (const page of pages) {
+      addPageIfNeeded();
+
+      if (page.type === "blank") {
+        const trimmedText = page.text.trim();
+        if (trimmedText.length > 0) {
+          const margin = 20;
+          const pageWidth = pdf.internal.pageSize.getWidth();
+          const maxTextWidth = pageWidth - margin * 2;
+          const textLines = pdf.splitTextToSize(trimmedText, maxTextWidth);
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(13);
+          pdf.text(textLines, margin, margin, { baseline: "top" });
+        }
+        continue;
+      }
+
       const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = url;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = page.url;
       });
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-
       const imgAspectRatio = img.width / img.height;
       const pageAspectRatio = pageWidth / pageHeight;
 
-      let renderWidth, renderHeight;
+      let renderWidth = pageWidth;
+      let renderHeight = pageHeight;
       if (imgAspectRatio > pageAspectRatio) {
-        renderWidth = pageWidth;
         renderHeight = pageWidth / imgAspectRatio;
       } else {
-        renderHeight = pageHeight;
         renderWidth = pageHeight * imgAspectRatio;
       }
 
       const xOffset = (pageWidth - renderWidth) / 2;
       const yOffset = (pageHeight - renderHeight) / 2;
+      const imageFormat = page.file.type.includes("png") ? "PNG" : "JPEG";
 
-      if (!isFirstPage) {
-        pdf.addPage();
-      }
-      isFirstPage = false;
-
-      pdf.addImage(img, "JPEG", xOffset, yOffset, renderWidth, renderHeight);
+      pdf.addImage(img, imageFormat, xOffset, yOffset, renderWidth, renderHeight);
     }
 
     return pdf;
@@ -152,7 +241,12 @@ export function PhotoToPdf() {
       if (pdf) {
         const blob = pdf.output("blob");
         const url = URL.createObjectURL(blob);
-        setPdfPreviewUrl(url);
+        setPdfPreviewUrl((currentUrl) => {
+          if (currentUrl) {
+            URL.revokeObjectURL(currentUrl);
+          }
+          return url;
+        });
       }
     } finally {
       setIsGenerating(false);
@@ -166,12 +260,9 @@ export function PhotoToPdf() {
     }
   };
 
-  const closePreview = () => {
-    if (pdfPreviewUrl) {
-      URL.revokeObjectURL(pdfPreviewUrl);
-      setPdfPreviewUrl(null);
-    }
-  };
+  const blankPages = pages.flatMap((page, index) =>
+    page.type === "blank" ? [{ page, index }] : []
+  );
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-8">
@@ -200,7 +291,15 @@ export function PhotoToPdf() {
                   <UploadSimple weight="bold" />
                   <span className="sm:inline">{t.addPhotos}</span>
                 </Button>
-                {images.length > 0 && (
+                <Button
+                  onClick={addBlankPage}
+                  variant="outline"
+                  className="gap-2 flex-1 sm:flex-none"
+                >
+                  <NotePencil weight="bold" />
+                  <span className="sm:inline">{t.addBlankPage}</span>
+                </Button>
+                {pages.length > 0 && (
                   <>
                     <Button
                       onClick={previewPdf}
@@ -227,7 +326,7 @@ export function PhotoToPdf() {
                   </>
                 )}
               </div>
-              {images.length > 0 && (
+              {pages.length > 0 && (
                 <Button
                   onClick={downloadPdf}
                   variant="default"
@@ -249,7 +348,7 @@ export function PhotoToPdf() {
               className="hidden"
             />
 
-            {images.length > 0 && (
+            {pages.length > 0 && (
               <div className="max-w-md">
                 <Field>
                   <FieldLabel htmlFor="pdf-name">{t.pdfName}</FieldLabel>
@@ -264,25 +363,25 @@ export function PhotoToPdf() {
               </div>
             )}
 
-            {images.length > 0 && (
+            {pages.length > 0 && (
               <div className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                   <Badge variant="secondary">
-                    {images.length} {images.length === 1 ? t.photo : t.photos}
+                    {pages.length} {pages.length === 1 ? t.page : t.pages}
                   </Badge>
                   <span className="text-xs sm:text-sm text-muted-foreground">
                     <span className="hidden sm:inline">
                       {t.dragToReorder} •{" "}
                     </span>
                     <span className="sm:hidden">{t.tapToReorder} • </span>
-                    {t.eachPhotoPage}
+                    {t.eachPage}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {images.map((image, index) => (
+                  {pages.map((page, index) => (
                     <div
-                      key={index}
+                      key={page.id}
                       draggable
                       onDragStart={() => handleDragStart(index)}
                       onDragOver={(e) => handleDragOver(e, index)}
@@ -292,17 +391,28 @@ export function PhotoToPdf() {
                       }`}
                     >
                       <div className="aspect-square rounded-lg overflow-hidden border-2 border-border">
-                        <img
-                          src={image.url}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
+                        {page.type === "image" ? (
+                          <img
+                            src={page.url}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-white text-black p-2 sm:p-3 overflow-hidden">
+                            <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+                              {t.blankPage}
+                            </p>
+                            <p className="mt-1 text-[10px] sm:text-xs leading-4 whitespace-pre-wrap overflow-hidden">
+                              {page.text.trim() ? page.text : t.blankPagePreview}
+                            </p>
+                          </div>
+                        )}
                       </div>
                       {/* Desktop: hover to show delete */}
                       <button
-                        onClick={() => removeImage(index)}
+                        onClick={() => removePage(index)}
                         className="absolute top-1.5 end-1.5 sm:top-2 sm:end-2 bg-destructive text-destructive-foreground rounded-full p-1 sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                        aria-label={t.removeImage}
+                        aria-label={t.removePage}
                       >
                         <X weight="bold" size={14} />
                       </button>
@@ -310,16 +420,16 @@ export function PhotoToPdf() {
                       <div className="absolute top-1.5 start-1.5 flex flex-col gap-1 sm:hidden">
                         {index > 0 && (
                           <button
-                            onClick={() => moveImage(index, "up")}
+                            onClick={() => movePage(index, "up")}
                             className="bg-background/90 backdrop-blur-sm text-foreground rounded p-1 border border-border"
                             aria-label={t.moveUp}
                           >
                             <ArrowUp weight="bold" size={14} />
                           </button>
                         )}
-                        {index < images.length - 1 && (
+                        {index < pages.length - 1 && (
                           <button
-                            onClick={() => moveImage(index, "down")}
+                            onClick={() => movePage(index, "down")}
                             className="bg-background/90 backdrop-blur-sm text-foreground rounded p-1 border border-border"
                             aria-label={t.moveDown}
                           >
@@ -333,10 +443,34 @@ export function PhotoToPdf() {
                     </div>
                   ))}
                 </div>
+
+                {blankPages.length > 0 && (
+                  <div className="space-y-3 pt-1">
+                    <p className="text-sm font-medium">{t.writeOnBlankPages}</p>
+                    <div className="space-y-3">
+                      {blankPages.map(({ page, index }, blankPageIndex) => (
+                        <Field key={page.id}>
+                          <FieldLabel htmlFor={`blank-page-${page.id}`}>
+                            {t.blankPage} {blankPageIndex + 1} ({t.page} {index + 1})
+                          </FieldLabel>
+                          <Textarea
+                            id={`blank-page-${page.id}`}
+                            value={page.text}
+                            onChange={(e) =>
+                              updateBlankPageText(index, e.target.value)
+                            }
+                            placeholder={t.blankPagePlaceholder}
+                            className="min-h-24 resize-y"
+                          />
+                        </Field>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {images.length === 0 && (
+            {pages.length === 0 && (
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed border-border rounded-lg p-8 sm:p-12 text-center cursor-pointer hover:border-primary active:border-primary transition-colors"
@@ -350,6 +484,9 @@ export function PhotoToPdf() {
                 </p>
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   {t.dragAndDrop}
+                </p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  {t.orAddBlankPage}
                 </p>
               </div>
             )}
