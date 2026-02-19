@@ -49,6 +49,86 @@ const revokePageResources = (page: PdfPage) => {
   }
 };
 
+const ARABIC_CHARACTER_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+
+const hasArabicCharacters = (value: string) => ARABIC_CHARACTER_REGEX.test(value);
+
+const wrapCanvasText = (
+  context: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+) => {
+  const lines: string[] = [];
+  const paragraphs = text.replace(/\r\n/g, "\n").split("\n");
+
+  for (const paragraph of paragraphs) {
+    const words = paragraph.split(/\s+/).filter((word) => word.length > 0);
+
+    if (words.length === 0) {
+      lines.push("");
+      continue;
+    }
+
+    let currentLine = words[0];
+    for (const word of words.slice(1)) {
+      const candidateLine = `${currentLine} ${word}`;
+      if (context.measureText(candidateLine).width <= maxWidth) {
+        currentLine = candidateLine;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+
+    lines.push(currentLine);
+  }
+
+  return lines;
+};
+
+const renderBlankTextAsCanvas = (text: string, pageWidth: number, pageHeight: number) => {
+  const scale = 8;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.floor(pageWidth * scale));
+  canvas.height = Math.max(1, Math.floor(pageHeight * scale));
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return null;
+  }
+
+  context.fillStyle = "#FFFFFF";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  const fontSize = Math.max(14, Math.round(canvas.width * 0.022));
+  const lineHeight = Math.round(fontSize * 1.6);
+  const margin = Math.max(24, Math.round(canvas.width * 0.075));
+  const isRtlText = hasArabicCharacters(text);
+
+  context.font = `${fontSize}px "Noto Sans Arabic Variable", "Noto Sans Variable", sans-serif`;
+  context.fillStyle = "#111111";
+  context.textAlign = isRtlText ? "right" : "left";
+  context.textBaseline = "top";
+  context.direction = isRtlText ? "rtl" : "ltr";
+
+  const maxLineWidth = canvas.width - margin * 2;
+  const wrappedLines = wrapCanvasText(context, text.trim(), maxLineWidth);
+  const startX = isRtlText ? canvas.width - margin : margin;
+  let cursorY = margin;
+  const maxY = canvas.height - margin;
+
+  for (const line of wrappedLines) {
+    if (cursorY + lineHeight > maxY) {
+      break;
+    }
+
+    context.fillText(line, startX, cursorY);
+    cursorY += lineHeight;
+  }
+
+  return canvas;
+};
+
 export function PhotoToPdf() {
   const { t } = useLanguage();
   const [pages, setPages] = useState<PdfPage[]>([]);
@@ -177,6 +257,10 @@ export function PhotoToPdf() {
   const createPdf = async () => {
     if (pages.length === 0) return null;
 
+    if (typeof document !== "undefined" && "fonts" in document) {
+      await document.fonts.ready;
+    }
+
     const pdf = new jsPDF();
     let isFirstPage = true;
 
@@ -193,13 +277,17 @@ export function PhotoToPdf() {
       if (page.type === "blank") {
         const trimmedText = page.text.trim();
         if (trimmedText.length > 0) {
-          const margin = 20;
           const pageWidth = pdf.internal.pageSize.getWidth();
-          const maxTextWidth = pageWidth - margin * 2;
-          const textLines = pdf.splitTextToSize(trimmedText, maxTextWidth);
-          pdf.setFont("helvetica", "normal");
-          pdf.setFontSize(13);
-          pdf.text(textLines, margin, margin, { baseline: "top" });
+          const pageHeight = pdf.internal.pageSize.getHeight();
+          const renderedTextCanvas = renderBlankTextAsCanvas(
+            trimmedText,
+            pageWidth,
+            pageHeight
+          );
+
+          if (renderedTextCanvas) {
+            pdf.addImage(renderedTextCanvas, "PNG", 0, 0, pageWidth, pageHeight);
+          }
         }
         continue;
       }
